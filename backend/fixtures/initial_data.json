@@ -1,0 +1,35 @@
+[
+  {
+    "model": "feeding.feedtype",
+    "pk": 1,
+    "fields": {
+      "name": "Сено тимофеевки",
+      "category": "HAY",
+      "description": "Высококачественное сено для кроликов",
+      "nutritional_value": {"protein": 8, "fiber": 25, "calcium": 0.5},
+      "created_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "feeding.feedtype",
+    "pk": 2,
+    "fields": {
+      "name": "Комбикорм Зерновой",
+      "category": "COMBINED",
+      "description": "Сбалансированный комбикорм для взрослых кроликов",
+      "nutritional_value": {"protein": 16, "fiber": 12, "calcium": 0.7},
+      "created_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "feeding.feedtype",
+    "pk": 3,
+    "fields": {
+      "name": "Пеллеты для молодняка",
+      "category": "COMBINED",
+      "description": "Пеллеты с повышенным содержанием белка для растущих крольчат",
+      "nutritional_value": {"protein": 18, "fiber": 10, "calcium": 0.6},
+      "created_at": "2025-01-01T00:00:00Z"
+    }
+  }
+]

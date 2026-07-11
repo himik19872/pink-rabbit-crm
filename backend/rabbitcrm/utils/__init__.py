@@ -1,0 +1,1 @@
+# RabbitCRM utils package
