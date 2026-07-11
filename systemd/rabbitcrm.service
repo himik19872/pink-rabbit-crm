@@ -1,0 +1,17 @@
+[Unit]
+Description=RabbitCRM — All Services Launcher
+After=network.target
+
+[Service]
+Type=forking
+User=himik
+WorkingDirectory=/home/himik/rabbit-crm
+ExecStart=/home/himik/rabbit-crm/start.sh
+ExecStop=/usr/bin/pkill -f "manage.py runserver" && /usr/bin/pkill -f "serve -s build" && /usr/bin/pkill -f "http.server 8082"
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/var/log/rabbitcrm.log
+StandardError=append:/var/log/rabbitcrm.log
+
+[Install]
+WantedBy=multi-user.target

@@ -3,6 +3,8 @@ node_modules/
 /frontend/build/
 /mobile/.expo/
 /mobile/dist/
+/mobile/dist-android/
+/mobile/android/
 
 # Python build artifacts
 dist/
