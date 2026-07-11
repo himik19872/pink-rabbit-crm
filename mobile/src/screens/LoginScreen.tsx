@@ -3,9 +3,15 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useServer } from '../contexts/ServerContext';
 
-const LoginScreen: React.FC = () => {
+interface Props {
+  onOpenSettings: () => void;
+}
+
+const LoginScreen: React.FC<Props> = ({ onOpenSettings }) => {
   const { login } = useAuth();
+  const { serverUrl } = useServer();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -63,6 +69,13 @@ const LoginScreen: React.FC = () => {
             <Text style={styles.buttonText}>Войти</Text>
           )}
         </TouchableOpacity>
+
+        {/* Server indicator & settings */}
+        <TouchableOpacity style={styles.serverRow} onPress={onOpenSettings}>
+          <Text style={styles.serverLabel}>🔗 Сервер: </Text>
+          <Text style={styles.serverUrl} numberOfLines={1}>{serverUrl}</Text>
+          <Text style={styles.serverEdit}> ⚙️</Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -114,6 +127,17 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  serverRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  serverLabel: { fontSize: 12, color: '#999' },
+  serverUrl: { fontSize: 12, color: '#1890ff', flex: 1 },
+  serverEdit: { fontSize: 14 },
 });
 
 export default LoginScreen;
