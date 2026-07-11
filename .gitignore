@@ -4,7 +4,7 @@ node_modules/
 /mobile/.expo/
 /mobile/dist/
 /mobile/dist-android/
-/mobile/android/
+/mobile/RabbitCRM*.apk
 
 # Python build artifacts
 dist/
@@ -44,3 +44,4 @@ Thumbs.db
 
 # Media
 qr_codes/
+/mobile/*.apk
