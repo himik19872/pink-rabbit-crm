@@ -1,7 +1,8 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
+# Node / React
+node_modules/
+/frontend/build/
+
+# Python build artifacts
 dist/
 build/
 .eggs/

@@ -3,7 +3,7 @@ import { Table, Tag, Space, Button, Card, Typography, Spin, Alert, Modal, Form, 
 import type { ColumnsType } from 'antd/es/table';
 import axios from 'axios';
 import dayjs from 'dayjs';
-import { RabbitOutlined, PlusOutlined, EditOutlined, DeleteOutlined, FileTextOutlined } from '@ant-design/icons';
+import { BugOutlined as RabbitOutlined, PlusOutlined, EditOutlined, DeleteOutlined, FileTextOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
 const { Option } = Select;
