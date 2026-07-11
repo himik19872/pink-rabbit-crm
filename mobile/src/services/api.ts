@@ -1,8 +1,9 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// API URL — используем localhost для веб-версии, IP для мобильного устройства
-const API_BASE = 'http://localhost:8000/api';
+// API URL — IP сервера в локальной сети для мобильного устройства
+// Для веб-версии (dev) можно заменить на http://localhost:8000/api
+const API_BASE = 'http://192.168.1.73:8000/api';
 
 const api = axios.create({
   baseURL: API_BASE,

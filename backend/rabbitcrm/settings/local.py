@@ -2,7 +2,7 @@ from .base import *
 
 # Local settings - for development
 DEBUG = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "192.168.1.73", "*"]
 
 # Use SQLite for local development (no PostgreSQL needed)
 DATABASES = {

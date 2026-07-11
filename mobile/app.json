@@ -3,13 +3,16 @@
     "name": "RabbitCRM",
     "slug": "rabbit-crm-mobile",
     "version": "1.0.0",
+    "owner": "himik19872",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "backgroundColor": "#1890ff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rabbitcrm.mobile"
@@ -18,7 +21,11 @@
       "adaptiveIcon": {
         "backgroundColor": "#1890ff"
       },
-      "package": "com.rabbitcrm.mobile"
+      "package": "com.rabbitcrm.mobile",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       [
@@ -27,6 +34,11 @@
           "cameraPermission": "Разрешите доступ к камере для сканирования QR-кодов клеток."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8555889c-ccb0-4997-89c8-0ec23ad4d255"
+      }
+    }
   }
 }
