@@ -15,7 +15,7 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     Promise.all([
-      rabbitService.list(),
+      rabbitService.list({ page_size: '100' }),
       breedingService.listKindlings().catch(() => []),
     ]).then(([rabbitData, kindlingData]) => {
       const rabbitResults = rabbitData.results || rabbitData;

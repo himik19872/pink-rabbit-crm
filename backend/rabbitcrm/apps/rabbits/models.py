@@ -60,9 +60,11 @@ class Rabbit(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.rabbit_id:
-            # Генерация ID на основе даты и порядкового номера
-            year = timezone.now().year
-            last_rabbit = Rabbit.objects.filter(birth_date__year=year).order_by("-id").first()
+            # Генерация ID на основе даты рождения кролика и порядкового номера
+            year = self.birth_date.year if self.birth_date else timezone.now().year
+            last_rabbit = Rabbit.objects.filter(
+                rabbit_id__startswith=f"RB-{year}-"
+            ).order_by("-id").first()
             if last_rabbit:
                 number = int(last_rabbit.rabbit_id.split("-")[-1]) + 1
             else:

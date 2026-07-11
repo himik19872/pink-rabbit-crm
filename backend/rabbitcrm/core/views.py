@@ -1,4 +1,8 @@
 from django.http import JsonResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 
 def api_root(request):
     """Корневой endpoint API"""
@@ -16,3 +20,15 @@ def api_root(request):
         }
     }
     return JsonResponse(data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def current_user(request):
+    """Текущий пользователь"""
+    user = request.user
+    return Response({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+    })
