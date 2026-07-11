@@ -1,6 +1,8 @@
-# Node / React
+# Node / React / Expo
 node_modules/
 /frontend/build/
+/mobile/.expo/
+/mobile/dist/
 
 # Python build artifacts
 dist/
@@ -34,10 +36,6 @@ db.sqlite3
 # OS
 .DS_Store
 Thumbs.db
-
-# Node / React
-node_modules/
-/frontend/build/
 
 # Docker
 .docker/

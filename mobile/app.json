@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "RabbitCRM",
+    "slug": "rabbit-crm-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1890ff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rabbitcrm.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1890ff"
+      },
+      "package": "com.rabbitcrm.mobile"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Разрешите доступ к камере для сканирования QR-кодов клеток."
+        }
+      ]
+    ]
+  }
+}
