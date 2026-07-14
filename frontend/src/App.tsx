@@ -12,6 +12,8 @@ import FeedingPage from './pages/FeedingPage';
 import HealthPage from './pages/HealthPage';
 import BreedingPage from './pages/BreedingPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import UsersPage from './pages/UsersPage';
+import SlaughterPage from './pages/SlaughterPage';
 import { Spin } from 'antd';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -37,6 +39,8 @@ const AppRoutes: React.FC = () => (
       <Route path="/health" element={<HealthPage />} />
       <Route path="/breeding" element={<BreedingPage />} />
       <Route path="/analytics" element={<AnalyticsPage />} />
+      <Route path="/users" element={<UsersPage />} />
+      <Route path="/slaughter" element={<SlaughterPage />} />
     </Route>
     <Route path="*" element={<Navigate to="/" />} />
   </Routes>

@@ -126,3 +126,32 @@ class DailyFeedPlan(models.Model):
     
     def __str__(self):
         return f"План {self.rabbit} - {self.date}"
+
+
+class FeedPurchase(models.Model):
+    """Приход корма (закупка)"""
+    
+    feed = models.ForeignKey(Feed, on_delete=models.CASCADE, related_name="purchases", verbose_name="Корм")
+    quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)], verbose_name="Количество (кг)")
+    price_per_kg = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Цена за кг")
+    total_cost = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Общая стоимость")
+    purchase_date = models.DateField(default=timezone.now, verbose_name="Дата закупки")
+    supplier = models.CharField(max_length=200, blank=True, verbose_name="Поставщик")
+    invoice_number = models.CharField(max_length=50, blank=True, verbose_name="Номер накладной")
+    batch_number = models.CharField(max_length=50, blank=True, verbose_name="Номер партии")
+    expiry_date = models.DateField(null=True, blank=True, verbose_name="Срок годности")
+    notes = models.TextField(blank=True, verbose_name="Примечания")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Приход корма"
+        verbose_name_plural = "Приходы кормов"
+        ordering = ["-purchase_date"]
+    
+    def __str__(self):
+        return f"{self.feed.name} — {self.quantity_kg} кг × {self.price_per_kg} ₽ = {self.total_cost} ₽ ({self.purchase_date})"
+    
+    def save(self, *args, **kwargs):
+        if not self.total_cost:
+            self.total_cost = self.quantity_kg * self.price_per_kg
+        super().save(*args, **kwargs)

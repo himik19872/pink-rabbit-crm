@@ -9,6 +9,8 @@ import {
   LineChartOutlined,
   LogoutOutlined,
   UserOutlined,
+  TeamOutlined,
+  ScissorOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,7 +30,9 @@ const AppLayout: React.FC = () => {
     { key: '/feeding', icon: <ExperimentOutlined />, label: 'Кормление' },
     { key: '/health', icon: <MedicineBoxOutlined />, label: 'Здоровье' },
     { key: '/breeding', icon: <ExperimentOutlined />, label: 'Разведение' },
+    { key: '/slaughter', icon: <ScissorOutlined />, label: 'Убой' },
     { key: '/analytics', icon: <LineChartOutlined />, label: 'Аналитика' },
+    ...(user?.is_staff ? [{ key: '/users', icon: <TeamOutlined />, label: 'Пользователи' }] : []),
   ];
 
   const handleLogout = () => {

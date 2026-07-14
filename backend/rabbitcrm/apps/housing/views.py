@@ -109,6 +109,18 @@ class CageViewSet(viewsets.ModelViewSet):
         return Response({"status": "cage_was_empty"})
 
 
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
+    def labels(self, request):
+        """Пакетная печать этикеток — возвращает данные для выбранных клеток"""
+        ids = request.data.get("ids", [])
+        if not ids:
+            return Response({"error": "ids required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        cages = Cage.objects.filter(id__in=ids)
+        labels_data = [cage.label_data for cage in cages]
+        return Response({"labels": labels_data, "count": len(labels_data)})
+
+
 class CageMoveViewSet(viewsets.ModelViewSet):
     """ViewSet для перемещений клеток"""
     

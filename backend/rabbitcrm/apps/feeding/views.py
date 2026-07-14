@@ -1,11 +1,12 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import FeedType, Feed, FeedStock, FeedDistribution, DailyFeedPlan
+from .models import FeedType, Feed, FeedStock, FeedDistribution, DailyFeedPlan, FeedPurchase
 from .serializers import (
     FeedTypeSerializer, FeedSerializer, FeedStockSerializer,
     FeedDistributionSerializer, DailyFeedPlanSerializer,
-    FeedDistributionWriteSerializer, DailyFeedPlanWriteSerializer
+    FeedDistributionWriteSerializer, DailyFeedPlanWriteSerializer,
+    FeedPurchaseSerializer,
 )
 
 
@@ -86,3 +87,12 @@ class DailyFeedPlanViewSet(viewsets.ModelViewSet):
         if rabbit_id:
             queryset = queryset.filter(rabbit_id=rabbit_id)
         return queryset
+
+class FeedPurchaseViewSet(viewsets.ModelViewSet):
+    """ViewSet для прихода кормов"""
+
+    queryset = FeedPurchase.objects.all()
+    serializer_class = FeedPurchaseSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["feed", "purchase_date"]

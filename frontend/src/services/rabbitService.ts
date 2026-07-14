@@ -12,10 +12,13 @@ export interface Rabbit {
   mother: number | null;
   father: number | null;
   mother_name?: string;
+  mother_rabbit_id?: string;
   father_name?: string;
+  father_rabbit_id?: string;
   current_cage?: string;
   is_breeding_stock: boolean;
   offspring_count?: number;
+  total_offspring?: number;
   notes?: string;
   created_at: string;
 }

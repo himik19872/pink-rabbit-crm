@@ -33,13 +33,18 @@ class PregnancySerializer(serializers.ModelSerializer):
     
     female_name = serializers.CharField(source="female.name", read_only=True)
     female_id = serializers.CharField(source="female.rabbit_id", read_only=True)
-    
+    male_name = serializers.CharField(source="male.name", read_only=True)
+    male_rabbit_id = serializers.CharField(source="male.rabbit_id", read_only=True)
+    remaining_days = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Pregnancy
         fields = [
-            "id", "female", "female_name", "female_id", "mating_date",
-            "expected_due_date", "actual_due_date", "confirmed", "ultrasound_date",
-            "embryos_count", "is_complete", "created_at"
+            "id", "female", "female_name", "female_id",
+            "male", "male_name", "male_rabbit_id",
+            "mating_date", "expected_due_date", "actual_due_date",
+            "confirmed", "ultrasound_date", "embryos_count",
+            "is_complete", "remaining_days", "created_at"
         ]
         read_only_fields = ["id", "created_at"]
 

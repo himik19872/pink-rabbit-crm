@@ -77,6 +77,7 @@ class Pregnancy(models.Model):
     """Беременность"""
     
     female = models.ForeignKey("rabbits.Rabbit", on_delete=models.PROTECT, related_name="pregnancies", verbose_name="Самка")
+    male = models.ForeignKey("rabbits.Rabbit", on_delete=models.SET_NULL, null=True, blank=True, related_name="pregnancies_male", verbose_name="Самец-производитель")
     mating_date = models.DateField(verbose_name="Дата спаривания")
     expected_due_date = models.DateField(verbose_name="Ожидаемая дата окота")
     actual_due_date = models.DateField(null=True, blank=True, verbose_name="Фактическая дата окота")
@@ -96,7 +97,17 @@ class Pregnancy(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.female} - {self.expected_due_date}"
+        male_name = self.male.name if self.male else "?"
+        return f"{self.female} × {male_name} — {self.expected_due_date}"
+
+    @property
+    def remaining_days(self):
+        """Осталось дней до окота (если беременность активна)"""
+        if self.is_complete:
+            return None
+        from django.utils import timezone
+        delta = self.expected_due_date - timezone.now().date()
+        return delta.days
     
     def save(self, *args, **kwargs):
         if not self.expected_due_date and self.mating_date:

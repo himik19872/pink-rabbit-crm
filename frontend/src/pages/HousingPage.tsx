@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card, Typography, Table, Tag, Button, Space, Modal, Form, Input, InputNumber,
-  Select, message, Popconfirm, Row, Col, Descriptions, Spin, Statistic,
+  Card, Typography, Table, Tag, Button, Space, Modal, Form, InputNumber,
+  Select, message, Popconfirm, Row, Col, Descriptions, Spin, Statistic, QRCode,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, QrcodeOutlined, HomeOutlined, ScanOutlined } from '@ant-design/icons';
+import { PlusOutlined, QrcodeOutlined, HomeOutlined, ScanOutlined, PrinterOutlined, EditOutlined } from '@ant-design/icons';
 import {
-  housingService, Cage, Building,
+  housingService, Cage,
 } from '../services/housingService';
 import { rabbitService, Rabbit } from '../services/rabbitService';
+import LabelPrinter from '../components/LabelPrinter';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const HousingPage: React.FC = () => {
-  const [buildings, setBuildings] = useState<Building[]>([]);
   const [cages, setCages] = useState<Cage[]>([]);
   const [rabbits, setRabbits] = useState<Rabbit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,17 +21,20 @@ const HousingPage: React.FC = () => {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedCage, setSelectedCage] = useState<Cage | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [filterBuilding, setFilterBuilding] = useState<number | undefined>();
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [editingCage, setEditingCage] = useState<Cage | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [assignForm] = Form.useForm();
+  const [editForm] = Form.useForm();
 
   useEffect(() => {
     Promise.all([
-      housingService.listBuildings(),
       housingService.listCages(),
       rabbitService.list(),
-    ]).then(([bData, cData, rData]) => {
-      setBuildings(bData.results || bData);
+    ]).then(([cData, rData]) => {
       setCages(cData.results || cData);
       setRabbits(rData.results || rData);
     }).catch(console.error).finally(() => setLoading(false));
@@ -43,6 +46,18 @@ const HousingPage: React.FC = () => {
       message.success('Клетка добавлена');
       setModalOpen(false);
       form.resetFields();
+      const cData = await housingService.listCages();
+      setCages(cData.results || cData);
+    } catch (err) { message.error('Ошибка'); }
+  };
+
+  const handleEditCage = async (values: any) => {
+    if (!editingCage) return;
+    try {
+      await housingService.updateCage(editingCage.id, values);
+      message.success('Клетка обновлена');
+      setEditModalOpen(false);
+      setEditingCage(null);
       const cData = await housingService.listCages();
       setCages(cData.results || cData);
     } catch (err) { message.error('Ошибка'); }
@@ -78,7 +93,7 @@ const HousingPage: React.FC = () => {
 
   const cageColumns: ColumnsType<Cage> = [
     { title: 'Адрес', dataIndex: 'shelf_address', key: 'address', render: (a: string, c: Cage) => `${a} — Клетка ${c.number}` },
-    { title: 'Вместимость', dataIndex: 'capacity', key: 'capacity', width: 100 },
+    { title: 'Вместимость', dataIndex: 'capacity', key: 'capacity', width: 100, render: (c: number) => `${c} крол.` },
     {
       title: 'Кролик', dataIndex: 'current_rabbit_info', key: 'rabbit',
       render: (r: string | null) => r ? <Tag color="green">{r}</Tag> : <Tag color="default">Пусто</Tag>,
@@ -88,14 +103,19 @@ const HousingPage: React.FC = () => {
       render: (d: string | null) => d || '—', width: 120,
     },
     {
-      title: 'QR', dataIndex: 'address_qr', key: 'qr', width: 80,
-      render: (qr: string) => <Tag icon={<QrcodeOutlined />} color="blue">QR</Tag>,
+      title: 'QR', key: 'qr', width: 80,
+      render: (_: any, c: Cage) => (
+        <Button type="link" icon={<QrcodeOutlined />} onClick={() => { setSelectedCage(c); setQrModalOpen(true); }}>
+          QR
+        </Button>
+      ),
     },
     {
       title: '', key: 'actions', width: 200,
       render: (_: any, c: Cage) => (
         <Space>
           <Button size="small" icon={<ScanOutlined />} onClick={() => showDetail(c)}>Детали</Button>
+          <Button size="small" icon={<EditOutlined />} onClick={() => { setEditingCage(c); editForm.setFieldsValue(c); setEditModalOpen(true); }} />
           {c.current_rabbit ? (
             <Popconfirm title="Освободить клетку?" onConfirm={() => handleClear(c.id)}>
               <Button size="small" danger>Освободить</Button>
@@ -122,9 +142,28 @@ const HousingPage: React.FC = () => {
 
       <Card
         title={<Title level={3} style={{ margin: 0, marginTop: 24 }}>🏠 Клетки</Title>}
-        extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Добавить клетку</Button>}
+        extra={
+          <Space>
+            {selectedRowKeys.length > 0 && (
+              <Button icon={<PrinterOutlined />} onClick={() => setPrintModalOpen(true)}>
+                Печать этикеток ({selectedRowKeys.length})
+              </Button>
+            )}
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>Добавить клетку</Button>
+          </Space>
+        }
       >
-        <Table columns={cageColumns} dataSource={cages} rowKey="id" pagination={{ pageSize: 15 }} size="middle" />
+        <Table
+          columns={cageColumns}
+          dataSource={cages}
+          rowKey="id"
+          pagination={{ pageSize: 15 }}
+          size="middle"
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (keys) => setSelectedRowKeys(keys),
+          }}
+        />
       </Card>
 
       {/* Add Cage Modal */}
@@ -137,7 +176,16 @@ const HousingPage: React.FC = () => {
             <InputNumber min={1} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="capacity" label="Вместимость" initialValue={1}>
-            <InputNumber min={1} max={10} style={{ width: '100%' }} />
+            <InputNumber min={1} max={50} style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Edit Cage Modal */}
+      <Modal title="Редактировать клетку" open={editModalOpen} onCancel={() => setEditModalOpen(false)} onOk={() => editForm.submit()}>
+        <Form form={editForm} layout="vertical" onFinish={handleEditCage}>
+          <Form.Item name="capacity" label="Вместимость (кроликов)">
+            <InputNumber min={1} max={50} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
       </Modal>
@@ -161,6 +209,9 @@ const HousingPage: React.FC = () => {
           <Descriptions column={1} bordered size="small">
             <Descriptions.Item label="Адрес">{selectedCage.shelf_address} — Клетка {selectedCage.number}</Descriptions.Item>
             <Descriptions.Item label="QR">{selectedCage.address_qr}</Descriptions.Item>
+            <Descriptions.Item label="QR-код">
+              <QRCode value={selectedCage.address_qr} size={150} />
+            </Descriptions.Item>
             <Descriptions.Item label="Вместимость">{selectedCage.capacity}</Descriptions.Item>
             <Descriptions.Item label="Кролик">{selectedCage.current_rabbit_info || 'Пусто'}</Descriptions.Item>
             <Descriptions.Item label="Уборка">{selectedCage.last_cleaned || '—'}</Descriptions.Item>
@@ -168,6 +219,39 @@ const HousingPage: React.FC = () => {
           </Descriptions>
         )}
       </Modal>
+
+      {/* QR Print Modal — одна клетка */}
+      <Modal
+        title="🖨️ QR-код для печати"
+        open={qrModalOpen}
+        onCancel={() => setQrModalOpen(false)}
+        footer={<Button type="primary" onClick={() => window.print()}>🖨️ Печать</Button>}
+        width={400}
+      >
+        {selectedCage && (
+          <div style={{ textAlign: 'center', padding: 16 }}>
+            <QRCode value={selectedCage.address_qr} size={200} style={{ marginBottom: 16 }} />
+            <div style={{ fontSize: 16, fontWeight: 'bold' }}>{selectedCage.shelf_address} — Клетка {selectedCage.number}</div>
+            <div style={{ fontSize: 12, color: '#999', marginTop: 8 }}>{selectedCage.address_qr}</div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Batch Print Modal */}
+      <LabelPrinter
+        open={printModalOpen}
+        cages={cages
+          .filter(c => selectedRowKeys.includes(c.id))
+          .map(c => ({
+            id: c.id,
+            address: `${c.shelf_address} — Клетка ${c.number}`,
+            qrData: c.address_qr,
+            barcodeData: c.barcode_text || `CAGE${String(c.id).padStart(6, '0')}`,
+            capacity: c.capacity,
+          }))
+        }
+        onClose={() => { setPrintModalOpen(false); setSelectedRowKeys([]); }}
+      />
     </div>
   );
 };

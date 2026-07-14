@@ -12,6 +12,7 @@ export interface Cage {
   last_disinfected: string | null;
   is_active: boolean;
   address_qr: string;
+  barcode_text?: string;
   qr_code_url?: string;
   rabbit_info?: Record<string, unknown> | null;
   created_at: string;
@@ -55,6 +56,7 @@ export const housingService = {
   async listCages(params?: Record<string, string>) { const r = await api.get('/housing/cages/', { params }); return r.data; },
   async getCage(id: number): Promise<Cage> { const r = await api.get(`/housing/cages/${id}/`); return r.data; },
   async createCage(data: { shelf: number; number: number; capacity: number }) { const r = await api.post('/housing/cages/', data); return r.data; },
+  async updateCage(id: number, data: { capacity?: number; is_active?: boolean }) { const r = await api.patch(`/housing/cages/${id}/`, data); return r.data; },
   async assignRabbit(cageId: number, rabbitId: number, reason?: string) { const r = await api.post(`/housing/cages/${cageId}/assign/`, { rabbit_id: rabbitId, reason }); return r.data; },
   async clearCage(cageId: number) { const r = await api.post(`/housing/cages/${cageId}/clear/`); return r.data; },
   async scanCage(cageId: number): Promise<Cage> { const r = await api.get('/housing/cages/scan/', { params: { cage_id: cageId } }); return r.data; },

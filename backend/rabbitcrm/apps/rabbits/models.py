@@ -13,6 +13,7 @@ class Rabbit(models.Model):
     ]
     
     STATUS_CHOICES = [
+        ("YOUNG", "Молодняк"),
         ("BREEDING", "Племенной"),
         ("MEAT", "Мясной"),
         ("PET", "Декоративный"),
@@ -21,7 +22,7 @@ class Rabbit(models.Model):
     ]
     
     id = models.AutoField(primary_key=True)
-    rabbit_id = models.CharField(max_length=20, unique=True, verbose_name="ID кролика")
+    rabbit_id = models.CharField(max_length=50, unique=True, verbose_name="ID кролика")
     name = models.CharField(max_length=100, blank=True, verbose_name="Кличка")
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, verbose_name="Пол")
     birth_date = models.DateField(verbose_name="Дата рождения")
@@ -60,17 +61,33 @@ class Rabbit(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.rabbit_id:
-            # Генерация ID на основе даты рождения кролика и порядкового номера
-            year = self.birth_date.year if self.birth_date else timezone.now().year
-            last_rabbit = Rabbit.objects.filter(
-                rabbit_id__startswith=f"RB-{year}-"
-            ).order_by("-id").first()
-            if last_rabbit:
-                number = int(last_rabbit.rabbit_id.split("-")[-1]) + 1
-            else:
-                number = 1
-            self.rabbit_id = f"RB-{year}-{number:04d}"
+            self.rabbit_id = self._generate_rabbit_id()
         super().save(*args, **kwargs)
+
+    def _generate_rabbit_id(self):
+        """Генерация генеалогического ID: M001-F002-00001"""
+        # Основатели линии — короткий ID
+        if not self.mother_id and not self.father_id:
+            prefix = "M" if self.gender == "M" else "F"
+            last = Rabbit.objects.filter(rabbit_id__regex=rf"^{prefix}\d+$").order_by("-id").first()
+            if last:
+                num = int(last.rabbit_id[1:]) + 1
+            else:
+                num = 1
+            return f"{prefix}{num:03d}"
+
+        # Дети — составной ID: отец-мать-номер
+        father_part = self.father.rabbit_id if self.father else "X"
+        mother_part = self.mother.rabbit_id if self.mother else "X"
+        parent_prefix = f"{father_part}-{mother_part}"
+
+        # Считаем сколько детей у этой пары
+        count = Rabbit.objects.filter(
+            mother_id=self.mother_id,
+            father_id=self.father_id,
+        ).count() + 1
+
+        return f"{parent_prefix}-{count:05d}"
     
     @property
     def age_months(self):
@@ -100,7 +117,33 @@ class Rabbit(models.Model):
         return self.status == "BREEDING"
     
     def get_offspring_count(self):
-        """Количество потомства (как мать или отец)"""
+        """Количество прямого потомства"""
+        return self.children_mother.count() + self.children_father.count()
+
+    def get_total_offspring_count(self):
+        """Количество всего потомства (включая внуков) — рекурсивно"""
+        direct = set(self.children_mother.all()) | set(self.children_father.all())
+        total = len(direct)
+        for child in direct:
+            total += child.get_total_offspring_count()
+        return total
+
+    def get_offspring_by_generation(self):
+        """Потомство по поколениям: {1: count, 2: count, ...}"""
+        result = {}
+        self._collect_offspring_depth(self, 1, result, set())
+        return result
+
+    @classmethod
+    def _collect_offspring_depth(cls, rabbit, depth, result, visited):
+        if rabbit.id in visited:
+            return
+        visited.add(rabbit.id)
+        result[depth] = result.get(depth, 0)
+        children = set(rabbit.children_mother.all()) | set(rabbit.children_father.all())
+        result[depth] += len(children)
+        for child in children:
+            cls._collect_offspring_depth(child, depth + 1, result, visited)
         return self.children_mother.count() + self.children_father.count()
     
     def get_full_pedigree(self, depth=3, current_depth=0):
@@ -164,3 +207,32 @@ class RabbitPhoto(models.Model):
     
     def __str__(self):
         return f"Фото {self.rabbit}"
+
+
+class Slaughter(models.Model):
+    """Учёт забоя кролика на мясо"""
+
+    rabbit = models.ForeignKey(Rabbit, on_delete=models.PROTECT, related_name="slaughters", verbose_name="Кролик")
+    slaughter_date = models.DateField(default=timezone.now, verbose_name="Дата забоя")
+    live_weight = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Живой вес (г)")
+    carcass_weight = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Чистый вес тушки (г)")
+    notes = models.TextField(blank=True, verbose_name="Примечания")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Забой"
+        verbose_name_plural = "Забои"
+        ordering = ["-slaughter_date"]
+        indexes = [
+            models.Index(fields=["-slaughter_date"]),
+        ]
+
+    def __str__(self):
+        return f"Забой {self.rabbit} — {self.slaughter_date}"
+
+    @property
+    def dressing_percentage(self):
+        """Убойный выход в %"""
+        if self.live_weight == 0:
+            return 0
+        return round((float(self.carcass_weight) / float(self.live_weight)) * 100, 1)

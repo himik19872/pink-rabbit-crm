@@ -36,6 +36,7 @@ class CageSerializer(serializers.ModelSerializer):
     shelf_address = serializers.CharField(source="shelf.full_address", read_only=True)
     current_rabbit_info = serializers.StringRelatedField(source="current_rabbit", read_only=True)
     address_qr = serializers.CharField(read_only=True)
+    barcode_text = serializers.CharField(read_only=True)
     qr_code_url = serializers.ImageField(source="qr_code", read_only=True)
     rabbit_info = serializers.JSONField(read_only=True)
     
@@ -44,8 +45,8 @@ class CageSerializer(serializers.ModelSerializer):
         fields = [
             "id", "shelf", "shelf_address", "number", "capacity",
             "current_rabbit", "current_rabbit_info", "last_cleaned",
-            "last_disinfected", "is_active", "address_qr", "qr_code_url",
-            "rabbit_info", "created_at"
+            "last_disinfected", "is_active", "address_qr", "barcode_text",
+            "qr_code_url", "rabbit_info", "created_at"
         ]
         read_only_fields = ["id", "created_at"]
 

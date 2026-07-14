@@ -27,16 +27,30 @@ const QRScanner: React.FC<Props> = ({ onScanSuccess, onClose }) => {
     setLoading(true);
 
     try {
-      // Формат QR: RABBITCRM:CAGE:123:Корпус 1 - Ряд 2 - Ярус 1 - Клетка 5
-      const match = data.match(/RABBITCRM:CAGE:(\d+):/);
-      if (!match) {
-        Alert.alert('Ошибка', 'QR-код не распознан как код клетки RabbitCRM');
+      // QR-формат: RABBITCRM:CAGE:123:Адрес
+      // Штрих-код: CAGE000021
+      let cageId: number | null = null;
+
+      const qrMatch = data.match(/RABBITCRM:CAGE:(\d+)/);
+      if (qrMatch) {
+        cageId = parseInt(qrMatch[1], 10);
+      } else {
+        const bcMatch = data.match(/CAGE(\d+)/i);
+        if (bcMatch) {
+          cageId = parseInt(bcMatch[1], 10);
+        } else {
+          const numMatch = data.match(/^(\d+)$/);
+          if (numMatch) cageId = parseInt(numMatch[1], 10);
+        }
+      }
+
+      if (!cageId) {
+        Alert.alert('Ошибка', 'QR/штрих-код не распознан как код клетки RabbitCRM');
         setScanned(false);
         setLoading(false);
         return;
       }
 
-      const cageId = parseInt(match[1], 10);
       const cageData = await rabbitService.getByCage(cageId);
 
       if (!cageData.current_rabbit || !cageData.rabbit_info) {
@@ -81,7 +95,7 @@ const QRScanner: React.FC<Props> = ({ onScanSuccess, onClose }) => {
       <CameraView
         style={styles.camera}
         facing="back"
-        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+        barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8'] }}
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
       >
         <View style={styles.overlay}>

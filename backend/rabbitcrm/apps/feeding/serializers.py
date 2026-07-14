@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import FeedType, Feed, FeedStock, FeedDistribution, DailyFeedPlan
+from .models import FeedType, Feed, FeedStock, FeedDistribution, DailyFeedPlan, FeedPurchase
 
 
 class FeedTypeSerializer(serializers.ModelSerializer):
@@ -87,3 +87,17 @@ class DailyFeedPlanWriteSerializer(serializers.ModelSerializer):
         model = DailyFeedPlan
         fields = ["id", "date", "rabbit", "total_quantity", "notes"]
         read_only_fields = ["id"]
+
+class FeedPurchaseSerializer(serializers.ModelSerializer):
+    """Сериализатор прихода корма"""
+    
+    feed_name = serializers.CharField(source="feed.name", read_only=True)
+    
+    class Meta:
+        model = FeedPurchase
+        fields = [
+            "id", "feed", "feed_name", "quantity_kg", "price_per_kg",
+            "total_cost", "purchase_date", "supplier", "invoice_number",
+            "batch_number", "expiry_date", "notes", "created_at"
+        ]
+        read_only_fields = ["id", "created_at"]

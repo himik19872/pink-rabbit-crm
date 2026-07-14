@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 
 // ============ Простой API без контекстов ============
 const STORAGE_KEYS = {
@@ -17,10 +18,23 @@ const DEFAULT_SERVER = 'http://192.168.1.73:8000';
 
 let _baseUrl = DEFAULT_SERVER;
 
-const createApi = (server: string) => axios.create({
-  baseURL: `${server}/api`,
-  timeout: 10000,
-});
+const createApi = (server: string) => {
+  const instance = axios.create({
+    baseURL: `${server}/api`,
+    timeout: 10000,
+  });
+
+  // Добавляем токен в каждый запрос
+  instance.interceptors.request.use(async (config) => {
+    const token = await AsyncStorage.getItem(STORAGE_KEYS.TOKEN);
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
+
+  return instance;
+};
 
 let api = createApi(_baseUrl);
 
@@ -186,19 +200,25 @@ export default function App() {
   return <HomeScreen onLogout={handleLogout} />;
 }
 
-// HomeScreen — без внешних зависимостей
+// HomeScreen — с QR-сканером через камеру
 const HomeScreen: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [scanned, setScanned] = useState<any>(null);
-  const [qrid, setQrid] = useState('');
-  const [showInput, setShowInput] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [weightVal, setWeightVal] = useState('');
   const [showWeight, setShowWeight] = useState(false);
+  const [testCageId, setTestCageId] = useState('');
+  const [showTestScan, setShowTestScan] = useState(false);
 
   const scanCage = async (cageId: string) => {
     try {
       const res = await api.get('/housing/cages/scan/', { params: { cage_id: cageId } });
       setScanned(res.data);
-    } catch { Alert.alert('Ошибка', 'Клетка не найдена'); }
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 401) Alert.alert('Ошибка', 'Не авторизован. Войдите заново.');
+      else if (status === 404) Alert.alert('Ошибка', `Клетка #${cageId} не найдена в базе`);
+      else Alert.alert('Ошибка', `Не удалось загрузить клетку #${cageId}: ${err?.message || 'проверьте соединение с сервером'}`);
+    }
   };
 
   const doAction = async (url: string, body: any, ok: string) => {
@@ -210,18 +230,55 @@ const HomeScreen: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     onLogout();
   };
 
-  if (showInput) {
-    return (
-      <View style={styles.center}>
-        <Text style={{ fontSize: 48, marginBottom: 16 }}>📷</Text>
-        <Text style={{ fontSize: 16, color: '#fff', marginBottom: 16 }}>Введите ID клетки</Text>
-        <TextInput style={[styles.input, { width: 200, color: '#333', backgroundColor: '#fff' }]} placeholder="ID клетки" placeholderTextColor="#999" value={qrid} onChangeText={setQrid} keyboardType="numeric" />
-        <TouchableOpacity style={[styles.button, { width: 200, marginTop: 12 }]} onPress={async () => { await scanCage(qrid); setShowInput(false); setQrid(''); }}>
-          <Text style={styles.buttonText}>Найти</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.linkBtn} onPress={() => setShowInput(false)}><Text style={styles.linkText}>← Назад</Text></TouchableOpacity>
-      </View>
-    );
+  // Обработка QR/штрих-кода: форматы RABBITCRM:CAGE:ID:ADDRESS или CAGE000021
+  const handleBarcodeScanned = (data: string) => {
+    setShowScanner(false);
+    // QR-формат: RABBITCRM:CAGE:21:Адрес
+    const qrMatch = data.match(/RABBITCRM:CAGE:(\d+)/);
+    if (qrMatch) { scanCage(qrMatch[1]); return; }
+    // Штрих-код: CAGE000021
+    const bcMatch = data.match(/CAGE(\d+)/i);
+    if (bcMatch) { scanCage(String(parseInt(bcMatch[1], 10))); return; }
+    // Просто число
+    const numMatch = data.match(/^(\d+)$/);
+    if (numMatch) { scanCage(numMatch[1]); return; }
+    Alert.alert('Ошибка', 'Не удалось распознать код клетки');
+  };
+
+  if (showScanner) {
+    const ScannerView = () => {
+      const [perm, reqPerm] = useCameraPermissions();
+      if (!perm) return <View style={styles.center}><ActivityIndicator size="large" color="#fff" /></View>;
+      if (!perm.granted) {
+        return (
+          <View style={styles.center}>
+            <Text style={{ color: '#fff', fontSize: 16, textAlign: 'center', marginBottom: 16 }}>Нужен доступ к камере</Text>
+            <TouchableOpacity style={styles.button} onPress={reqPerm}><Text style={styles.buttonText}>Разрешить</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.linkBtn} onPress={() => setShowScanner(false)}><Text style={styles.linkText}>← Назад</Text></TouchableOpacity>
+          </View>
+        );
+      }
+      return (
+        <View style={{ flex: 1 }}>
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8'] }}
+            onBarcodeScanned={({ data }: BarcodeScanningResult) => handleBarcodeScanned(data)}
+          />
+          {/* Оверлей поверх камеры */}
+          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 32 }}>
+            <View style={{ backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12, padding: 16, alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 16 }}>Наведите камеру на QR-код клетки</Text>
+            </View>
+            <TouchableOpacity style={[styles.button, { marginTop: 16 }]} onPress={() => setShowScanner(false)}>
+              <Text style={styles.buttonText}>← Назад</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    };
+    return <ScannerView />;
   }
 
   return (
@@ -259,8 +316,13 @@ const HomeScreen: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         </View>
       )}
 
-      <TouchableOpacity style={{ margin: 16, backgroundColor: '#1890ff', borderRadius: 12, padding: 18, alignItems: 'center' }} onPress={() => setShowInput(true)}>
-        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>📷 Ввести ID клетки</Text>
+      <TouchableOpacity style={{ margin: 16, backgroundColor: '#52c41a', borderRadius: 12, padding: 18, alignItems: 'center' }} onPress={() => setShowScanner(true)}>
+        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>📷 Сканировать QR-код</Text>
+      </TouchableOpacity>
+
+      {/* Кнопка тестового сканирования (ручной ввод ID клетки) */}
+      <TouchableOpacity style={{ marginHorizontal: 16, marginBottom: 8, backgroundColor: '#fa8c16', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={() => { setTestCageId(''); setShowTestScan(true); }}>
+        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>🧪 Тест: ввести ID клетки</Text>
       </TouchableOpacity>
 
       {showWeight && (
@@ -273,7 +335,7 @@ const HomeScreen: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               <TouchableOpacity style={{ backgroundColor: '#1890ff', padding: 10, paddingHorizontal: 20, borderRadius: 8 }} onPress={async () => {
                 if (!weightVal || !scanned?.rabbit_info) return;
                 try {
-                  await api.post('/health/weight/', { rabbit: scanned.rabbit_info.id, weight: parseFloat(weightVal), date: new Date().toISOString().split('T')[0] });
+                  await api.post('/rabbits/weights/', { rabbit: scanned.rabbit_info.id, weight: parseFloat(weightVal), method: 'manual', measured_at: new Date().toISOString() });
                   Alert.alert('✅', `Вес ${weightVal} г`);
                   setShowWeight(false); setWeightVal('');
                 } catch { Alert.alert('Ошибка'); }
@@ -282,6 +344,47 @@ const HomeScreen: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           </View>
         </View>
       )}
+
+      {/* Тестовое сканирование (ручной ввод ID) */}
+      {showTestScan && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 24, width: '80%' }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>🧪 Тест: ID клетки</Text>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>Введите ID клетки (например: 21)</Text>
+            <TextInput style={[styles.input, { marginBottom: 16 }]} placeholder="ID клетки" keyboardType="numeric" value={testCageId} onChangeText={setTestCageId} />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+              <TouchableOpacity onPress={() => setShowTestScan(false)}><Text style={{ padding: 10, color: '#999' }}>Отмена</Text></TouchableOpacity>
+              <TouchableOpacity style={{ backgroundColor: '#fa8c16', padding: 10, paddingHorizontal: 20, borderRadius: 8 }} onPress={() => {
+                if (!testCageId) return;
+                setShowTestScan(false);
+                scanCage(testCageId);
+              }}><Text style={{ color: '#fff' }}>Сканировать</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
+
+// ============ Стили ============
+const styles = StyleSheet.create({
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1890ff' },
+  container: { flex: 1, backgroundColor: '#1890ff', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 360, alignItems: 'center', elevation: 8 },
+  logo: { fontSize: 64, marginBottom: 8 },
+  icon: { fontSize: 48, marginBottom: 8 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#1890ff', marginBottom: 4 },
+  subtitle: { fontSize: 14, color: '#666', marginBottom: 24 },
+  input: { width: '100%', height: 48, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 16, marginBottom: 12, fontSize: 16, color: '#333' },
+  hint: { fontSize: 12, color: '#999', marginBottom: 16, alignSelf: 'flex-start' },
+  button: { width: '100%', height: 48, backgroundColor: '#1890ff', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 8 },
+  btnDisabled: { opacity: 0.6 },
+  buttonText: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  linkBtn: { marginTop: 16 },
+  linkText: { color: '#1890ff', fontSize: 16 },
+  serverRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0', width: '100%' },
+  serverLabel: { fontSize: 12, color: '#999' },
+  serverUrl: { fontSize: 12, color: '#1890ff', flex: 1 },
+  serverEdit: { fontSize: 14 },
+});

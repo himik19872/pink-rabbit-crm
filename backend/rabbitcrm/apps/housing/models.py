@@ -94,8 +94,30 @@ class Cage(models.Model):
     
     @property
     def address_qr(self):
-        """QR-код для сканирования (используется в мобильном приложении)"""
+        """QR-данные для сканирования — только латиница, без кириллицы"""
+        return f"RABBITCRM:CAGE:{self.id}"
+
+    @property
+    def address_qr_full(self):
+        """QR-код с полным адресом (для отладки)"""
         return f"RABBITCRM:CAGE:{self.id}:{self.full_address}"
+
+    @property
+    def barcode_text(self):
+        """Текст для штрих-кода (Code128) — только ID для компактности"""
+        return f"CAGE{self.id:06d}"
+
+    @property
+    def label_data(self):
+        """Полные данные этикетки для печати"""
+        return {
+            "id": self.id,
+            "address": self.full_address,
+            "qr_data": self.address_qr,
+            "barcode_text": self.barcode_text,
+            "capacity": self.capacity,
+            "rabbit_info": self.rabbit_info,
+        }
     
     def save(self, *args, **kwargs):
         """При создании генерируем QR-код"""
